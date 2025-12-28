@@ -1,6 +1,6 @@
 // IndexedDB for Admin Dashboard
 const DB_NAME = 'facistore_admin';
-const DB_VERSION = 2; // Incremented version to force upgrade if needed, though structure seems similar
+const DB_VERSION = 3; // Incremented for new stores
 
 let db: IDBDatabase | null = null;
 
@@ -37,6 +37,21 @@ export const initDB = (): Promise<IDBDatabase> => {
         const historyStore = database.createObjectStore('backup_history', { keyPath: 'id', autoIncrement: true });
         historyStore.createIndex('clientId', 'clientId', { unique: false });
         historyStore.createIndex('date', 'date', { unique: false });
+      }
+      
+      // Notes store
+      if (!database.objectStoreNames.contains('notes')) {
+        const notesStore = database.createObjectStore('notes', { keyPath: 'id', autoIncrement: true });
+        notesStore.createIndex('clientId', 'clientId', { unique: false });
+        notesStore.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+      
+      // Schedule store
+      if (!database.objectStoreNames.contains('schedule')) {
+        const scheduleStore = database.createObjectStore('schedule', { keyPath: 'id', autoIncrement: true });
+        scheduleStore.createIndex('clientId', 'clientId', { unique: false });
+        scheduleStore.createIndex('date', 'date', { unique: false });
+        scheduleStore.createIndex('completed', 'completed', { unique: false });
       }
     };
   });
@@ -157,7 +172,45 @@ export interface BackupRecord {
   };
 }
 
+// Notes
+export interface Note {
+  id?: number;
+  clientId?: string;
+  clientName?: string;
+  title: string;
+  content: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Schedule/Events
+export interface ScheduleEvent {
+  id?: number;
+  clientId?: string;
+  clientName?: string;
+  title: string;
+  description?: string;
+  date: string;
+  time?: string;
+  type: 'installation' | 'followup' | 'payment' | 'meeting' | 'other';
+  completed: boolean;
+  createdAt: string;
+}
+
 export const addBackupRecord = (record: BackupRecord) => add('backup_history', record);
 export const getBackupHistory = () => getAll<BackupRecord>('backup_history');
 export const updateBackupRecord = (record: BackupRecord) => update('backup_history', record);
 export const deleteBackupRecord = (id: number) => remove('backup_history', id);
+
+// Notes helpers
+export const getNotes = () => getAll<Note>('notes');
+export const addNote = (note: Note) => add('notes', note);
+export const updateNote = (note: Note) => update('notes', note);
+export const deleteNote = (id: number) => remove('notes', id);
+
+// Schedule helpers
+export const getSchedule = () => getAll<ScheduleEvent>('schedule');
+export const addScheduleEvent = (event: ScheduleEvent) => add('schedule', event);
+export const updateScheduleEvent = (event: ScheduleEvent) => update('schedule', event);
+export const deleteScheduleEvent = (id: number) => remove('schedule', id);

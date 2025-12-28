@@ -30,7 +30,12 @@ import {
   CheckSquare,
   Square,
   Edit3,
-  Trash2
+  Trash2,
+  StickyNote,
+  Calendar,
+  CalendarCheck,
+  Bell,
+  CheckCircle
 } from 'lucide-react';
 import { 
   XAxis, 
@@ -57,8 +62,18 @@ import {
   getBackupHistory,
   updateBackupRecord,
   deleteBackupRecord,
+  getNotes,
+  addNote,
+  updateNote,
+  deleteNote,
+  getSchedule,
+  addScheduleEvent,
+  updateScheduleEvent,
+  deleteScheduleEvent,
   Client, 
-  BackupRecord 
+  BackupRecord,
+  Note,
+  ScheduleEvent
 } from './lib/db';
 
 // --- Types ---
@@ -68,8 +83,8 @@ interface LogEntry { id: number; action_type: string; details: string; created_a
 
 // --- Components ---
 
-const Card = ({ children, className = '', noPadding = false }: { children: React.ReactNode; className?: string; noPadding?: boolean }) => (
-  <div className={`rounded-3xl border border-white/5 bg-[#121212] text-card-foreground shadow-2xl backdrop-blur-sm ${noPadding ? '' : 'p-6'} ${className}`}>
+const Card = ({ children, className = '', noPadding = false, style }: { children: React.ReactNode; className?: string; noPadding?: boolean; style?: React.CSSProperties }) => (
+  <div className={`rounded-3xl border border-white/5 bg-[#121212] text-card-foreground shadow-2xl backdrop-blur-sm ${noPadding ? '' : 'p-6'} ${className}`} style={style}>
     {children}
   </div>
 );
@@ -135,12 +150,22 @@ const StatCard = ({ title, value, icon: Icon, trend, trendValue, color = 'emeral
 
 function App() {
   // State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'profits' | 'converter' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'clients' | 'profits' | 'notes' | 'converter' | 'settings'>('dashboard');
   const [clients, setClients] = useState<Client[]>([]);
   const [settings, setSettingsData] = useState<Settings>({ token: '', chatId: '' });
   const [history, setHistory] = useState<BackupRecord[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  
+  // Notes & Schedule State
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleEvent[]>([]);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
+  const [noteForm, setNoteForm] = useState({ title: '', content: '', clientId: '', color: '#10b981' });
+  const [eventForm, setEventForm] = useState<{ title: string; description: string; clientId: string; date: string; time: string; type: 'installation' | 'followup' | 'payment' | 'meeting' | 'other' }>({ title: '', description: '', clientId: '', date: '', time: '', type: 'installation' });
   
   // Modals & Sheets
   const [showModal, setShowModal] = useState<'add' | 'edit' | 'logs' | 'manual-report' | 'export' | 'edit-record' | null>(null);
@@ -191,6 +216,8 @@ function App() {
     setClients(await getClients());
     setSettingsData(await getSettings());
     setHistory(await getBackupHistory());
+    setNotes(await getNotes());
+    setSchedule(await getSchedule());
   };
 
   // --- Logic ---
@@ -664,6 +691,109 @@ function App() {
     { name: 'Outstanding', value: totalDebt, color: '#f59e0b' }
   ];
 
+  // === Notes Functions ===
+  const handleSaveNote = async () => {
+    const client = clients.find(c => c.id === noteForm.clientId);
+    const noteData: Note = {
+      ...editingNote,
+      title: noteForm.title,
+      content: noteForm.content,
+      clientId: noteForm.clientId || undefined,
+      clientName: client?.name,
+      color: noteForm.color,
+      createdAt: editingNote?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    if (editingNote?.id) {
+      await updateNote(noteData);
+    } else {
+      await addNote(noteData);
+    }
+    
+    await refreshData();
+    setShowNoteModal(false);
+    setEditingNote(null);
+    setNoteForm({ title: '', content: '', clientId: '', color: '#10b981' });
+  };
+
+  const handleDeleteNote = async (id: number) => {
+    if (!confirm('حذف الملاحظة؟')) return;
+    await deleteNote(id);
+    await refreshData();
+  };
+
+  const openEditNote = (note: Note) => {
+    setEditingNote(note);
+    setNoteForm({
+      title: note.title,
+      content: note.content,
+      clientId: note.clientId || '',
+      color: note.color
+    });
+    setShowNoteModal(true);
+  };
+
+  // === Schedule Functions ===
+  const handleSaveEvent = async () => {
+    const client = clients.find(c => c.id === eventForm.clientId);
+    const eventData: ScheduleEvent = {
+      ...editingEvent,
+      title: eventForm.title,
+      description: eventForm.description,
+      clientId: eventForm.clientId || undefined,
+      clientName: client?.name,
+      date: eventForm.date,
+      time: eventForm.time,
+      type: eventForm.type,
+      completed: editingEvent?.completed || false,
+      createdAt: editingEvent?.createdAt || new Date().toISOString()
+    };
+    
+    if (editingEvent?.id) {
+      await updateScheduleEvent(eventData);
+    } else {
+      await addScheduleEvent(eventData);
+    }
+    
+    await refreshData();
+    setShowEventModal(false);
+    setEditingEvent(null);
+    setEventForm({ title: '', description: '', clientId: '', date: '', time: '', type: 'installation' });
+  };
+
+  const handleDeleteEvent = async (id: number) => {
+    if (!confirm('حذف الموعد؟')) return;
+    await deleteScheduleEvent(id);
+    await refreshData();
+  };
+
+  const toggleEventComplete = async (event: ScheduleEvent) => {
+    await updateScheduleEvent({ ...event, completed: !event.completed });
+    await refreshData();
+  };
+
+  const openEditEvent = (event: ScheduleEvent) => {
+    setEditingEvent(event);
+    setEventForm({
+      title: event.title,
+      description: event.description || '',
+      clientId: event.clientId || '',
+      date: event.date,
+      time: event.time || '',
+      type: event.type
+    });
+    setShowEventModal(true);
+  };
+
+  const eventTypeLabels: Record<string, { label: string; color: string }> = {
+    installation: { label: 'تثبيت', color: 'bg-blue-500' },
+    followup: { label: 'متابعة', color: 'bg-purple-500' },
+    payment: { label: 'دفعة', color: 'bg-emerald-500' },
+    meeting: { label: 'اجتماع', color: 'bg-amber-500' },
+    other: { label: 'أخرى', color: 'bg-zinc-500' }
+  };
+
 
   return (
     <div className="flex h-screen bg-[#09090b] text-zinc-100 font-sans selection:bg-emerald-500/30 overflow-hidden" dir="rtl">
@@ -695,6 +825,7 @@ function App() {
             { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
             { id: 'clients', label: 'Clients', icon: Users },
             { id: 'profits', label: 'Profits & Growth', icon: PieChartIcon },
+            { id: 'notes', label: 'Notes & Schedule', icon: StickyNote },
             { id: 'converter', label: 'Tools', icon: FileSpreadsheet },
             { id: 'settings', label: 'Settings', icon: SettingsIcon },
           ].map((item) => (
@@ -743,6 +874,7 @@ function App() {
                {activeTab === 'dashboard' && 'Dashboard'}
                {activeTab === 'clients' && 'Clients'}
                {activeTab === 'profits' && 'Financial Breakdown'}
+               {activeTab === 'notes' && 'Notes & Schedule'}
                {activeTab === 'converter' && 'Tools'}
                {activeTab === 'settings' && 'Settings'}
              </h2>
@@ -1173,6 +1305,198 @@ function App() {
              </div>
           )}
 
+          {/* NOTES & SCHEDULE TAB */}
+          {activeTab === 'notes' && (
+             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-500">
+               
+               {/* Header */}
+               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-[#121212] p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-white/5">
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white">الملاحظات والمواعيد</h2>
+                    <p className="text-zinc-500 text-xs sm:text-sm">تتبع ملاحظاتك ومواعيدك مع الزبائن</p>
+                  </div>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button 
+                      icon={StickyNote} 
+                      variant="outline"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => { setEditingNote(null); setNoteForm({ title: '', content: '', clientId: '', color: '#10b981' }); setShowNoteModal(true); }}
+                    >
+                       ملاحظة
+                    </Button>
+                    <Button 
+                      icon={Calendar} 
+                      className="flex-1 sm:flex-none"
+                      onClick={() => { setEditingEvent(null); setEventForm({ title: '', description: '', clientId: '', date: new Date().toISOString().split('T')[0], time: '', type: 'installation' }); setShowEventModal(true); }}
+                    >
+                       موعد
+                    </Button>
+                  </div>
+               </div>
+
+               <div className="grid lg:grid-cols-2 gap-6">
+                  
+                  {/* Notes Section */}
+                  <div className="space-y-4">
+                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <StickyNote className="w-5 h-5 text-amber-400"/>
+                        الملاحظات
+                     </h3>
+                     
+                     {notes.length === 0 ? (
+                        <Card className="p-8 text-center">
+                           <StickyNote className="w-12 h-12 mx-auto mb-4 text-zinc-600"/>
+                           <p className="text-zinc-500">لا توجد ملاحظات</p>
+                        </Card>
+                     ) : (
+                        <div className="grid gap-3">
+                           {notes.map(note => (
+                              <Card 
+                                 key={note.id} 
+                                 className="p-4 border-r-4 hover:bg-white/5 transition-colors"
+                                 style={{ borderRightColor: note.color }}
+                              >
+                                 <div className="flex justify-between items-start gap-2 mb-2">
+                                    <h4 className="font-bold text-white">{note.title}</h4>
+                                    <div className="flex gap-1 flex-shrink-0">
+                                       <button 
+                                          onClick={() => openEditNote(note)}
+                                          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                                       >
+                                          <Edit3 className="w-4 h-4 text-blue-400"/>
+                                       </button>
+                                       <button 
+                                          onClick={() => note.id && handleDeleteNote(note.id)}
+                                          className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors"
+                                       >
+                                          <Trash2 className="w-4 h-4 text-red-400"/>
+                                       </button>
+                                    </div>
+                                 </div>
+                                 <p className="text-zinc-400 text-sm whitespace-pre-wrap">{note.content}</p>
+                                 <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/5">
+                                    {note.clientName && (
+                                       <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-zinc-300">
+                                          {note.clientName}
+                                       </span>
+                                    )}
+                                    <span className="text-[10px] text-zinc-500">
+                                       {new Date(note.updatedAt).toLocaleDateString('ar-DZ')}
+                                    </span>
+                                 </div>
+                              </Card>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+
+                  {/* Schedule Section */}
+                  <div className="space-y-4">
+                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-blue-400"/>
+                        جدول المواعيد
+                     </h3>
+                     
+                     {schedule.length === 0 ? (
+                        <Card className="p-8 text-center">
+                           <Calendar className="w-12 h-12 mx-auto mb-4 text-zinc-600"/>
+                           <p className="text-zinc-500">لا توجد مواعيد</p>
+                        </Card>
+                     ) : (
+                        <div className="space-y-3">
+                           {schedule
+                              .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                              .map(event => (
+                              <Card 
+                                 key={event.id} 
+                                 className={`p-4 transition-all ${event.completed ? 'opacity-60' : ''}`}
+                              >
+                                 <div className="flex gap-3">
+                                    <button 
+                                       onClick={() => toggleEventComplete(event)}
+                                       className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                          event.completed 
+                                             ? 'bg-emerald-500 border-emerald-500' 
+                                             : 'border-zinc-600 hover:border-emerald-500'
+                                       }`}
+                                    >
+                                       {event.completed && <CheckCircle className="w-4 h-4 text-white"/>}
+                                    </button>
+                                    
+                                    <div className="flex-1 min-w-0">
+                                       <div className="flex items-start justify-between gap-2">
+                                          <div>
+                                             <h4 className={`font-bold ${event.completed ? 'line-through text-zinc-500' : 'text-white'}`}>
+                                                {event.title}
+                                             </h4>
+                                             {event.description && (
+                                                <p className="text-zinc-400 text-sm mt-1">{event.description}</p>
+                                             )}
+                                          </div>
+                                          <div className="flex gap-1 flex-shrink-0">
+                                             <button 
+                                                onClick={() => openEditEvent(event)}
+                                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+                                             >
+                                                <Edit3 className="w-4 h-4 text-blue-400"/>
+                                             </button>
+                                             <button 
+                                                onClick={() => event.id && handleDeleteEvent(event.id)}
+                                                className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors"
+                                             >
+                                                <Trash2 className="w-4 h-4 text-red-400"/>
+                                             </button>
+                                          </div>
+                                       </div>
+                                       
+                                       <div className="flex flex-wrap items-center gap-2 mt-3">
+                                          <span className={`text-[10px] px-2 py-1 rounded-full text-white ${eventTypeLabels[event.type]?.color || 'bg-zinc-500'}`}>
+                                             {eventTypeLabels[event.type]?.label || event.type}
+                                          </span>
+                                          <span className="text-xs text-zinc-400 flex items-center gap-1">
+                                             <CalendarCheck className="w-3 h-3"/>
+                                             {new Date(event.date).toLocaleDateString('ar-DZ')}
+                                          </span>
+                                          {event.time && (
+                                             <span className="text-xs text-zinc-400 flex items-center gap-1">
+                                                <Clock className="w-3 h-3"/>
+                                                {event.time}
+                                             </span>
+                                          )}
+                                          {event.clientName && (
+                                             <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-zinc-300">
+                                                {event.clientName}
+                                             </span>
+                                          )}
+                                       </div>
+                                    </div>
+                                 </div>
+                              </Card>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+               </div>
+
+               {/* Upcoming Events Summary */}
+               {schedule.filter(e => !e.completed && new Date(e.date) >= new Date()).length > 0 && (
+                  <Card className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20">
+                     <div className="flex items-center gap-3">
+                        <Bell className="w-5 h-5 text-blue-400"/>
+                        <div>
+                           <p className="text-white font-medium">
+                              لديك {schedule.filter(e => !e.completed && new Date(e.date) >= new Date()).length} موعد قادم
+                           </p>
+                           <p className="text-zinc-400 text-sm">
+                              القادم: {schedule.filter(e => !e.completed).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.title}
+                           </p>
+                        </div>
+                     </div>
+                  </Card>
+               )}
+             </div>
+          )}
+
           {/* CONVERTER TAB */}
           {activeTab === 'converter' && (
              <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-5 duration-500">
@@ -1588,6 +1912,170 @@ function App() {
                  </div>
               </Card>
            )}
+        </div>
+      )}
+
+      {/* Note Modal */}
+      {showNoteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+           <Card className="w-full max-w-md shadow-2xl border-white/10" noPadding>
+              <div className="p-6">
+                 <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-white">
+                       {editingNote ? 'تعديل الملاحظة' : 'ملاحظة جديدة'}
+                    </h3>
+                    <Button variant="ghost" size="icon" onClick={() => setShowNoteModal(false)}><X className="w-5 h-5"/></Button>
+                 </div>
+                 
+                 <div className="space-y-4">
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-zinc-500 uppercase">العنوان</label>
+                       <input 
+                          value={noteForm.title}
+                          onChange={e => setNoteForm({...noteForm, title: e.target.value})}
+                          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
+                          placeholder="عنوان الملاحظة..."
+                       />
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-zinc-500 uppercase">المحتوى</label>
+                       <textarea 
+                          value={noteForm.content}
+                          onChange={e => setNoteForm({...noteForm, content: e.target.value})}
+                          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50 min-h-[120px] resize-none"
+                          placeholder="اكتب ملاحظتك هنا..."
+                       />
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-zinc-500 uppercase">الزبون (اختياري)</label>
+                       <select 
+                          value={noteForm.clientId}
+                          onChange={e => setNoteForm({...noteForm, clientId: e.target.value})}
+                          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
+                       >
+                          <option value="">-- بدون زبون --</option>
+                          {clients.map(c => (
+                             <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                       </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-zinc-500 uppercase">اللون</label>
+                       <div className="flex gap-2">
+                          {['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899'].map(color => (
+                             <button
+                                key={color}
+                                onClick={() => setNoteForm({...noteForm, color})}
+                                className={`w-8 h-8 rounded-full transition-transform ${noteForm.color === color ? 'scale-125 ring-2 ring-white' : ''}`}
+                                style={{ backgroundColor: color }}
+                             />
+                          ))}
+                       </div>
+                    </div>
+                    
+                    <div className="pt-4 flex gap-3">
+                       <Button variant="outline" className="flex-1" onClick={() => setShowNoteModal(false)}>إلغاء</Button>
+                       <Button className="flex-[2]" onClick={handleSaveNote} disabled={!noteForm.title}>حفظ</Button>
+                    </div>
+                 </div>
+              </div>
+           </Card>
+        </div>
+      )}
+
+      {/* Event Modal */}
+      {showEventModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300">
+           <Card className="w-full max-w-md shadow-2xl border-white/10" noPadding>
+              <div className="p-6">
+                 <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-white">
+                       {editingEvent ? 'تعديل الموعد' : 'موعد جديد'}
+                    </h3>
+                    <Button variant="ghost" size="icon" onClick={() => setShowEventModal(false)}><X className="w-5 h-5"/></Button>
+                 </div>
+                 
+                 <div className="space-y-4">
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-zinc-500 uppercase">العنوان</label>
+                       <input 
+                          value={eventForm.title}
+                          onChange={e => setEventForm({...eventForm, title: e.target.value})}
+                          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
+                          placeholder="مثال: تثبيت التطبيق لمحل أحمد"
+                       />
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-zinc-500 uppercase">الوصف (اختياري)</label>
+                       <textarea 
+                          value={eventForm.description}
+                          onChange={e => setEventForm({...eventForm, description: e.target.value})}
+                          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50 min-h-[80px] resize-none"
+                          placeholder="تفاصيل إضافية..."
+                       />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                       <div className="space-y-2">
+                          <label className="text-xs font-bold text-zinc-500 uppercase">التاريخ</label>
+                          <input 
+                             type="date"
+                             value={eventForm.date}
+                             onChange={e => setEventForm({...eventForm, date: e.target.value})}
+                             className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
+                          />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-xs font-bold text-zinc-500 uppercase">الوقت</label>
+                          <input 
+                             type="time"
+                             value={eventForm.time}
+                             onChange={e => setEventForm({...eventForm, time: e.target.value})}
+                             className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
+                          />
+                       </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-zinc-500 uppercase">النوع</label>
+                       <select 
+                          value={eventForm.type}
+                          onChange={e => setEventForm({...eventForm, type: e.target.value as any})}
+                          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
+                       >
+                          <option value="installation">تثبيت التطبيق</option>
+                          <option value="followup">متابعة</option>
+                          <option value="payment">دفعة</option>
+                          <option value="meeting">اجتماع</option>
+                          <option value="other">أخرى</option>
+                       </select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                       <label className="text-xs font-bold text-zinc-500 uppercase">الزبون (اختياري)</label>
+                       <select 
+                          value={eventForm.clientId}
+                          onChange={e => setEventForm({...eventForm, clientId: e.target.value})}
+                          className="w-full bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500/50"
+                       >
+                          <option value="">-- بدون زبون --</option>
+                          {clients.map(c => (
+                             <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                       </select>
+                    </div>
+                    
+                    <div className="pt-4 flex gap-3">
+                       <Button variant="outline" className="flex-1" onClick={() => setShowEventModal(false)}>إلغاء</Button>
+                       <Button className="flex-[2]" onClick={handleSaveEvent} disabled={!eventForm.title || !eventForm.date}>حفظ</Button>
+                    </div>
+                 </div>
+              </div>
+           </Card>
         </div>
       )}
 
