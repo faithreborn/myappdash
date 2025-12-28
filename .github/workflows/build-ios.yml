@@ -79,11 +79,22 @@ jobs:
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 16' \
             -derivedDataPath build \
+            ONLY_ACTIVE_ARCH=YES \
+            DEBUG_INFORMATION_FORMAT=dwarf \
             build
+
+      - name: Prepare App for Upload
+        run: |
+          # Find and copy only the .app bundle
+          mkdir -p upload
+          cp -r ios/App/build/Build/Products/Release-iphonesimulator/App.app upload/
+          # Compress it
+          cd upload
+          zip -r FaciStoreAdmin.zip App.app
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ios-build
-          path: ios/App/build/
-          retention-days: 7
+          name: ios-app
+          path: upload/FaciStoreAdmin.zip
+          retention-days: 30
