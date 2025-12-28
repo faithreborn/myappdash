@@ -1,4 +1,4 @@
-name: Build iOS App
+name: Build iOS IPA
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-ios:
+  build-ipa:
     runs-on: macos-latest
 
     steps:
@@ -31,15 +31,11 @@ jobs:
 
       - name: Generate App Icons
         run: |
-          # Install ImageMagick for icon generation
           brew install imagemagick
-          
-          # Create icon sizes for iOS
           ICON_DIR="ios/App/App/Assets.xcassets/AppIcon.appiconset"
           mkdir -p "$ICON_DIR"
           
           if [ -f "public/icon.png" ]; then
-            # Generate all required iOS icon sizes
             convert public/icon.png -resize 20x20 "$ICON_DIR/AppIcon-20x20@1x.png"
             convert public/icon.png -resize 40x40 "$ICON_DIR/AppIcon-20x20@2x.png"
             convert public/icon.png -resize 60x60 "$ICON_DIR/AppIcon-20x20@3x.png"
@@ -55,9 +51,7 @@ jobs:
             convert public/icon.png -resize 152x152 "$ICON_DIR/AppIcon-76x76@2x.png"
             convert public/icon.png -resize 167x167 "$ICON_DIR/AppIcon-83.5x83.5@2x.png"
             convert public/icon.png -resize 1024x1024 "$ICON_DIR/AppIcon-1024x1024@1x.png"
-            echo "✅ Icons generated from public/icon.png"
-          else
-            echo "⚠️ public/icon.png not found, using default icons"
+            echo "✅ Icons generated"
           fi
 
       - name: Setup Xcode
@@ -70,31 +64,48 @@ jobs:
           cd ios/App
           pod install
 
-      - name: Build iOS App (Simulator)
+      - name: Build Unsigned App
         run: |
           cd ios/App
+          
+          # Build for device without signing
           xcodebuild -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -sdk iphoneos \
             -derivedDataPath build \
-            ONLY_ACTIVE_ARCH=YES \
-            DEBUG_INFORMATION_FORMAT=dwarf \
-            build
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            ONLY_ACTIVE_ARCH=NO
 
-      - name: Prepare App for Upload
+      - name: Create IPA
         run: |
-          # Find and copy only the .app bundle
-          mkdir -p upload
-          cp -r ios/App/build/Build/Products/Release-iphonesimulator/App.app upload/
-          # Compress it
-          cd upload
-          zip -r FaciStoreAdmin.zip App.app
+          cd ios/App
+          
+          # Find the .app
+          APP_PATH=$(find build -name "*.app" -type d | head -1)
+          echo "Found app at: $APP_PATH"
+          
+          # Create Payload folder structure
+          mkdir -p Payload
+          cp -r "$APP_PATH" Payload/
+          
+          # Create IPA
+          zip -r FaciStoreAdmin-unsigned.ipa Payload
+          
+          # Show size
+          ls -lh FaciStoreAdmin-unsigned.ipa
+          
+          # Cleanup
+          rm -rf Payload
 
-      - name: Upload Build Artifact
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
-          name: ios-app
-          path: upload/FaciStoreAdmin.zip
+          name: ios-ipa-unsigned
+          path: ios/App/FaciStoreAdmin-unsigned.ipa
           retention-days: 30
