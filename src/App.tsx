@@ -15,7 +15,6 @@ import {
   Eye,
   Loader2,
   Wifi,
-  AlertTriangle,
   DollarSign,
   TrendingUp,
   Server,
@@ -33,7 +32,6 @@ import {
   Trash2,
   StickyNote,
   Calendar,
-  CalendarCheck,
   Bell,
   CheckCircle
 } from 'lucide-react';
@@ -112,7 +110,7 @@ const Button = ({ children, onClick, variant = 'primary', className = '', disabl
   );
 };
 
-const StatCard = ({ title, value, icon: Icon, trend, trendValue, color = 'emerald' }: any) => {
+const StatCard = ({ title, value, icon: Icon, trend, trendValue, color = 'emerald', subtitle }: any) => {
   const colors = {
     emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
     blue: "text-blue-400 bg-blue-500/10 border-blue-500/20",
@@ -120,26 +118,29 @@ const StatCard = ({ title, value, icon: Icon, trend, trendValue, color = 'emeral
     amber: "text-amber-400 bg-amber-500/10 border-amber-500/20",
   };
 
+  const glowColors = {
+    emerald: "hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]",
+    blue: "hover:shadow-[0_0_30px_rgba(59,130,246,0.15)]",
+    purple: "hover:shadow-[0_0_30px_rgba(168,85,247,0.15)]",
+    amber: "hover:shadow-[0_0_30px_rgba(245,158,11,0.15)]",
+  };
+
   return (
-    <Card className="relative overflow-hidden group hover:bg-white/[0.02] transition-colors p-4 sm:p-6">
-      <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
-        <Icon className="w-16 h-16 sm:w-24 sm:h-24" />
-      </div>
-      <div className="relative z-10">
-        <div className="flex items-center justify-between mb-2 sm:mb-4">
-          <div className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl border ${colors[color as keyof typeof colors]}`}>
-            <Icon className="w-4 h-4 sm:w-6 sm:h-6" />
-          </div>
+    <Card className={`relative overflow-hidden group hover:bg-white/[0.02] transition-all duration-300 p-4 sm:p-5 stat-card ${glowColors[color as keyof typeof glowColors]}`}>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-zinc-500 text-xs font-medium mb-1 uppercase tracking-wider">{title}</p>
+          <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{value}</h3>
+          {subtitle && <p className="text-xs text-zinc-500 mt-1">{subtitle}</p>}
           {trend && (
-             <div className={`hidden sm:flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${trend === 'up' ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
-               {trend === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
-               {trendValue}
-             </div>
+            <div className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full mt-2 ${trend === 'up' ? 'text-emerald-400 bg-emerald-500/10' : 'text-red-400 bg-red-500/10'}`}>
+              {trend === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingUp className="w-3 h-3 rotate-180" />}
+              {trendValue}
+            </div>
           )}
         </div>
-        <div>
-          <p className="text-zinc-500 text-xs sm:text-sm font-medium mb-0.5 sm:mb-1 truncate">{title}</p>
-          <h3 className="text-xl sm:text-3xl font-bold text-white tracking-tight">{value}</h3>
+        <div className={`p-2.5 sm:p-3 rounded-xl border ${colors[color as keyof typeof colors]} transition-transform group-hover:scale-110`}>
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
       </div>
     </Card>
@@ -894,85 +895,196 @@ function App() {
           
           {/* DASHBOARD TAB */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
-              {/* Financial Stats Row */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700">
+              {/* Financial Stats Row - 4 cards like the reference image */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard 
                   title="Total Revenue" 
-                  value={`${(latestRevenues / 1000000).toFixed(1)}M`} 
+                  value={`$${latestRevenues.toLocaleString()}`} 
                   icon={DollarSign}
                   color="emerald"
                   trend="up"
-                  trendValue="+12%"
+                  trendValue="+12.5%"
+                  subtitle="Transactions this month"
                 />
-                 <StatCard 
-                  title="Active Clients" 
-                  value={globalStats.active} 
+                <StatCard 
+                  title="Total Customers" 
+                  value={globalStats.active.toLocaleString()} 
                   icon={Users}
                   color="blue"
                   trend="up"
-                  trendValue="+1"
+                  trendValue="+8.2%"
+                  subtitle="Active accounts"
                 />
-                 <StatCard 
-                  title="Outstanding" 
-                  value={`${(totalDebt / 1000000).toFixed(1)}M`} 
-                  icon={AlertTriangle}
-                  color="amber"
-                />
-                 <StatCard 
-                  title="Health" 
-                  value="98.5%" 
+                <StatCard 
+                  title="Active Products" 
+                  value={(history.length * 12).toLocaleString()} 
                   icon={Activity}
                   color="purple"
+                  trend="up"
+                  trendValue="+5.1%"
+                  subtitle="Revenue per customer"
+                />
+                <StatCard 
+                  title="Growth Rate" 
+                  value="4.5%" 
+                  icon={TrendingUp}
+                  color="amber"
+                  subtitle="Steady performance increase"
                 />
               </div>
 
-              {/* Charts Section */}
-              <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
-                <Card className="lg:col-span-2 p-4 sm:p-6 flex flex-col h-[300px] sm:h-[400px]">
-                  <div className="flex justify-between items-center mb-4 sm:mb-8">
-                     <h3 className="font-bold text-white text-base sm:text-lg">Daily Activity</h3>
-                     <select className="bg-white/5 border border-white/10 rounded-lg text-xs px-2 sm:px-3 py-1 text-zinc-400 focus:outline-none">
-                       <option>This Week</option>
-                     </select>
+              {/* Main Chart Section - Full width like reference */}
+              <Card className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div>
+                    <h3 className="font-bold text-white text-lg">Total Visitors</h3>
+                    <p className="text-zinc-500 text-sm">Track the last 30 days</p>
                   </div>
-                  <div className="flex-1 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={[{n:'Mon',v:2400},{n:'Tue',v:1398},{n:'Wed',v:9800},{n:'Thu',v:3908},{n:'Fri',v:4800},{n:'Sat',v:3800},{n:'Sun',v:4300}]}>
-                        <defs>
-                          <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                        <XAxis dataKey="n" axisLine={false} tickLine={false} tick={{fill:'#52525b', fontSize:10}} />
-                        <YAxis axisLine={false} tickLine={false} tick={{fill:'#52525b', fontSize:10}} hide={window.innerWidth < 640} />
-                        <Tooltip contentStyle={{backgroundColor:'#18181b', border:'1px solid #27272a', borderRadius:'12px'}} />
-                        <Area type="monotone" dataKey="v" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorPv)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                  <div className="flex gap-2">
+                    <button className="px-3 py-1.5 text-xs rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Last 30 days</button>
+                    <button className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-zinc-400 hover:bg-white/10 transition-colors">Last 24 hours</button>
+                    <button className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-zinc-400 hover:bg-white/10 transition-colors">Last 7 days</button>
                   </div>
-                </Card>
-                
-                <Card className="p-4 sm:p-6 h-[300px] sm:h-[400px] flex flex-col">
-                   <h3 className="font-bold text-white text-base sm:text-lg mb-4 sm:mb-6">Recent Backups</h3>
-                   <div className="flex-1 overflow-y-auto w-full custom-scrollbar space-y-3 sm:space-y-4 pr-2">
-                      {history.slice().reverse().slice(0,10).map((h, i) => (
-                        <div key={i} className="flex gap-3 sm:gap-4 items-start p-2 sm:p-3 hover:bg-white/5 rounded-xl sm:rounded-2xl transition-colors cursor-default group">
-                           <div className={`mt-1 min-w-[8px] h-2 rounded-full ${h.status==='success'?'bg-emerald-500':'bg-red-500'} ring-4 ring-white/5 group-hover:ring-white/10 transition-all`}></div>
-                           <div className="flex-1 min-w-0">
-                             <p className="text-sm font-semibold text-white truncate">{h.clientName}</p>
-                             <div className="flex justify-between items-center mt-1">
-                               <p className="text-xs text-zinc-500">{new Date(h.date).toLocaleTimeString()}</p>
-                               {h.stats && <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded-full text-zinc-400">{h.stats.contracts} Contracts</span>}
-                             </div>
-                           </div>
-                        </div>
+                </div>
+                <div className="h-[250px] sm:h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={[
+                      {n:'Jan 1',v:2400,v2:1800,v3:1200},
+                      {n:'Jan 5',v:1398,v2:2200,v3:900},
+                      {n:'Jan 10',v:9800,v2:3200,v3:2100},
+                      {n:'Jan 15',v:3908,v2:2800,v3:1500},
+                      {n:'Jan 20',v:4800,v2:3500,v3:2000},
+                      {n:'Jan 25',v:3800,v2:4200,v3:1800},
+                      {n:'Jan 30',v:4300,v2:3800,v3:2200},
+                      {n:'Feb 5',v:5200,v2:4100,v3:2500},
+                      {n:'Feb 10',v:4100,v2:3600,v3:1900},
+                      {n:'Feb 15',v:6300,v2:4800,v3:2800},
+                      {n:'Feb 20',v:5800,v2:4200,v3:2400},
+                      {n:'Feb 25',v:7200,v2:5100,v3:3100}
+                    ]}>
+                      <defs>
+                        <linearGradient id="colorV1" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorV2" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorV3" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+                      <XAxis dataKey="n" axisLine={false} tickLine={false} tick={{fill:'#52525b', fontSize:10}} />
+                      <YAxis axisLine={false} tickLine={false} tick={{fill:'#52525b', fontSize:10}} />
+                      <Tooltip 
+                        contentStyle={{backgroundColor:'#18181b', border:'1px solid #27272a', borderRadius:'12px', boxShadow:'0 10px 40px rgba(0,0,0,0.5)'}} 
+                        labelStyle={{color:'#fff', fontWeight:'bold'}}
+                      />
+                      <Area type="monotone" dataKey="v" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorV1)" name="Revenue" />
+                      <Area type="monotone" dataKey="v2" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorV2)" name="Visitors" />
+                      <Area type="monotone" dataKey="v3" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorV3)" name="Orders" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                    <span className="text-xs text-zinc-400">Revenue</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span className="text-xs text-zinc-400">Visitors</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <span className="text-xs text-zinc-400">Orders</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* Bottom Section - Table like reference image */}
+              <Card className="p-0 overflow-hidden" noPadding>
+                <div className="p-4 sm:p-5 border-b border-white/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Active</span>
+                    <span className="text-xs px-2 py-1 rounded bg-white/5 text-zinc-400">All transactions</span>
+                    <span className="text-xs px-2 py-1 rounded bg-white/5 text-zinc-400">Pending</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-zinc-400 hover:bg-white/10 transition-colors flex items-center gap-1">
+                      <Download className="w-3 h-3"/> Export
+                    </button>
+                    <button className="px-3 py-1.5 text-xs rounded-lg bg-emerald-500 text-black font-medium">+ Add Entry</button>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-zinc-500 uppercase bg-white/[0.02] border-b border-white/5">
+                      <tr>
+                        <th className="px-4 py-3 text-right font-medium">Invoice</th>
+                        <th className="px-4 py-3 text-right font-medium">Invoice Type</th>
+                        <th className="px-4 py-3 text-right font-medium">Status</th>
+                        <th className="px-4 py-3 text-right font-medium">Team</th>
+                        <th className="px-4 py-3 text-right font-medium">Level</th>
+                        <th className="px-4 py-3 text-right font-medium">Members</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {(history.length > 0 ? history.slice().reverse().slice(0,5) : [
+                        { clientName: 'Cornerstone', status: 'success', stats: { totalRevenue: 45000 } },
+                        { clientName: 'Quantum Labs', status: 'pending', stats: { totalRevenue: 32000 } },
+                        { clientName: 'Nova Systems', status: 'success', stats: { totalRevenue: 28000 } }
+                      ]).map((h: any, i) => (
+                        <tr key={i} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-3">
+                              <input type="checkbox" className="w-4 h-4 rounded border-zinc-700 bg-transparent" />
+                              <span className="font-medium text-white">{h.clientName || 'Client'}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-zinc-400">Credit card</td>
+                          <td className="px-4 py-4">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                              h.status === 'success' 
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}>
+                              {h.status === 'success' ? 'In Progress' : 'Pending'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-zinc-400">Code Less</td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-1">
+                              {[1,2,3].map(n => (
+                                <div key={n} className="w-1.5 h-4 rounded-sm bg-emerald-500/60"></div>
+                              ))}
+                              {[4,5].map(n => (
+                                <div key={n} className="w-1.5 h-4 rounded-sm bg-zinc-700"></div>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex -space-x-2 rtl:space-x-reverse">
+                              {[0,1,2].map(n => (
+                                <div key={n} className="w-7 h-7 rounded-full bg-gradient-to-br from-zinc-600 to-zinc-800 border-2 border-[#121212] flex items-center justify-center text-[10px] font-bold text-white">
+                                  {String.fromCharCode(65 + n)}
+                                </div>
+                              ))}
+                              <div className="w-7 h-7 rounded-full bg-zinc-800 border-2 border-[#121212] flex items-center justify-center text-[10px] text-zinc-400">
+                                +2
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
                       ))}
-                   </div>
-                </Card>
-              </div>
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
             </div>
           )}
 
@@ -1309,191 +1421,291 @@ function App() {
           {activeTab === 'notes' && (
              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-500">
                
-               {/* Header */}
-               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-[#121212] p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-white/5">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-bold text-white">الملاحظات والمواعيد</h2>
-                    <p className="text-zinc-500 text-xs sm:text-sm">تتبع ملاحظاتك ومواعيدك مع الزبائن</p>
+               {/* Stats Overview */}
+               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 rounded-2xl p-4 border border-amber-500/20">
+                     <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-500/20 rounded-xl">
+                           <StickyNote className="w-5 h-5 text-amber-400"/>
+                        </div>
+                        <div>
+                           <p className="text-2xl font-bold text-white">{notes.length}</p>
+                           <p className="text-xs text-zinc-500">ملاحظة</p>
+                        </div>
+                     </div>
                   </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Button 
-                      icon={StickyNote} 
-                      variant="outline"
-                      className="flex-1 sm:flex-none"
-                      onClick={() => { setEditingNote(null); setNoteForm({ title: '', content: '', clientId: '', color: '#10b981' }); setShowNoteModal(true); }}
-                    >
-                       ملاحظة
-                    </Button>
-                    <Button 
-                      icon={Calendar} 
-                      className="flex-1 sm:flex-none"
-                      onClick={() => { setEditingEvent(null); setEventForm({ title: '', description: '', clientId: '', date: new Date().toISOString().split('T')[0], time: '', type: 'installation' }); setShowEventModal(true); }}
-                    >
-                       موعد
-                    </Button>
+                  <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-2xl p-4 border border-blue-500/20">
+                     <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/20 rounded-xl">
+                           <Calendar className="w-5 h-5 text-blue-400"/>
+                        </div>
+                        <div>
+                           <p className="text-2xl font-bold text-white">{schedule.length}</p>
+                           <p className="text-xs text-zinc-500">موعد</p>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 rounded-2xl p-4 border border-emerald-500/20">
+                     <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-500/20 rounded-xl">
+                           <CheckCircle className="w-5 h-5 text-emerald-400"/>
+                        </div>
+                        <div>
+                           <p className="text-2xl font-bold text-white">{schedule.filter(e => e.completed).length}</p>
+                           <p className="text-xs text-zinc-500">مكتمل</p>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 rounded-2xl p-4 border border-purple-500/20">
+                     <div className="flex items-center gap-3">
+                        <div className="p-2 bg-purple-500/20 rounded-xl">
+                           <Bell className="w-5 h-5 text-purple-400"/>
+                        </div>
+                        <div>
+                           <p className="text-2xl font-bold text-white">{schedule.filter(e => !e.completed).length}</p>
+                           <p className="text-xs text-zinc-500">قادم</p>
+                        </div>
+                     </div>
                   </div>
                </div>
 
-               <div className="grid lg:grid-cols-2 gap-6">
+               {/* Action Buttons */}
+               <div className="flex gap-3">
+                  <Button 
+                    icon={StickyNote} 
+                    variant="outline"
+                    className="flex-1 sm:flex-none h-12"
+                    onClick={() => { setEditingNote(null); setNoteForm({ title: '', content: '', clientId: '', color: '#10b981' }); setShowNoteModal(true); }}
+                  >
+                     إضافة ملاحظة
+                  </Button>
+                  <Button 
+                    icon={Calendar} 
+                    className="flex-1 sm:flex-none h-12"
+                    onClick={() => { setEditingEvent(null); setEventForm({ title: '', description: '', clientId: '', date: new Date().toISOString().split('T')[0], time: '', type: 'installation' }); setShowEventModal(true); }}
+                  >
+                     إضافة موعد
+                  </Button>
+               </div>
+
+               {/* Main Content Grid */}
+               <div className="grid lg:grid-cols-5 gap-6">
                   
-                  {/* Notes Section */}
-                  <div className="space-y-4">
-                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                        <StickyNote className="w-5 h-5 text-amber-400"/>
-                        الملاحظات
-                     </h3>
+                  {/* Notes Section - 3 columns */}
+                  <div className="lg:col-span-3 space-y-4">
+                     <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                           <StickyNote className="w-5 h-5 text-amber-400"/>
+                           الملاحظات
+                        </h3>
+                        <span className="text-xs text-zinc-500 bg-white/5 px-3 py-1 rounded-full">{notes.length} ملاحظة</span>
+                     </div>
                      
                      {notes.length === 0 ? (
-                        <Card className="p-8 text-center">
-                           <StickyNote className="w-12 h-12 mx-auto mb-4 text-zinc-600"/>
-                           <p className="text-zinc-500">لا توجد ملاحظات</p>
+                        <Card className="p-12 text-center border-dashed border-2 border-white/10 bg-transparent">
+                           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                              <StickyNote className="w-8 h-8 text-amber-500/50"/>
+                           </div>
+                           <p className="text-zinc-400 font-medium">لا توجد ملاحظات</p>
+                           <p className="text-zinc-600 text-sm mt-1">أضف ملاحظتك الأولى</p>
                         </Card>
                      ) : (
-                        <div className="grid gap-3">
+                        <div className="grid sm:grid-cols-2 gap-4">
                            {notes.map(note => (
-                              <Card 
+                              <div 
                                  key={note.id} 
-                                 className="p-4 border-r-4 hover:bg-white/5 transition-colors"
-                                 style={{ borderRightColor: note.color }}
+                                 className="relative bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-black/40 transition-all duration-500 group border border-white/5 hover:border-white/10"
                               >
-                                 <div className="flex justify-between items-start gap-2 mb-2">
-                                    <h4 className="font-bold text-white">{note.title}</h4>
-                                    <div className="flex gap-1 flex-shrink-0">
-                                       <button 
-                                          onClick={() => openEditNote(note)}
-                                          className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-                                       >
-                                          <Edit3 className="w-4 h-4 text-blue-400"/>
-                                       </button>
-                                       <button 
-                                          onClick={() => note.id && handleDeleteNote(note.id)}
-                                          className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors"
-                                       >
-                                          <Trash2 className="w-4 h-4 text-red-400"/>
-                                       </button>
+                                 {/* Colored accent */}
+                                 <div className="absolute top-0 left-0 right-0 h-1 opacity-80" style={{ background: `linear-gradient(90deg, ${note.color}, ${note.color}88)` }}></div>
+                                 
+                                 {/* Glow effect on hover */}
+                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(circle at top, ${note.color}10, transparent 70%)` }}></div>
+                                 
+                                 <div className="relative p-5">
+                                    {/* Header */}
+                                    <div className="flex justify-between items-start gap-3 mb-4">
+                                       <div className="flex items-start gap-3">
+                                          <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${note.color}20` }}>
+                                             <StickyNote className="w-5 h-5" style={{ color: note.color }}/>
+                                          </div>
+                                          <div>
+                                             <h4 className="font-bold text-white group-hover:text-emerald-400 transition-colors text-base">{note.title}</h4>
+                                             <p className="text-[10px] text-zinc-600 mt-0.5">
+                                                {new Date(note.updatedAt).toLocaleDateString('ar-DZ', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                             </p>
+                                          </div>
+                                       </div>
+                                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0">
+                                          <button 
+                                             onClick={() => openEditNote(note)}
+                                             className="p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all hover:scale-110"
+                                          >
+                                             <Edit3 className="w-4 h-4 text-blue-400"/>
+                                          </button>
+                                          <button 
+                                             onClick={() => note.id && handleDeleteNote(note.id)}
+                                             className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all hover:scale-110"
+                                          >
+                                             <Trash2 className="w-4 h-4 text-red-400"/>
+                                          </button>
+                                       </div>
                                     </div>
-                                 </div>
-                                 <p className="text-zinc-400 text-sm whitespace-pre-wrap">{note.content}</p>
-                                 <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/5">
+                                    
+                                    {/* Content */}
+                                    <p className="text-zinc-400 text-sm leading-relaxed line-clamp-3 mb-4">{note.content}</p>
+                                    
+                                    {/* Footer */}
                                     {note.clientName && (
-                                       <span className="text-xs bg-white/10 px-2 py-1 rounded-full text-zinc-300">
-                                          {note.clientName}
-                                       </span>
+                                       <div className="pt-4 border-t border-white/5">
+                                          <div className="flex items-center gap-2">
+                                             <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                                <Users className="w-3 h-3 text-emerald-400"/>
+                                             </div>
+                                             <span className="text-xs text-emerald-400 font-medium">{note.clientName}</span>
+                                          </div>
+                                       </div>
                                     )}
-                                    <span className="text-[10px] text-zinc-500">
-                                       {new Date(note.updatedAt).toLocaleDateString('ar-DZ')}
-                                    </span>
                                  </div>
-                              </Card>
+                              </div>
                            ))}
                         </div>
                      )}
                   </div>
 
-                  {/* Schedule Section */}
-                  <div className="space-y-4">
-                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-blue-400"/>
-                        جدول المواعيد
-                     </h3>
+                  {/* Schedule Section - 2 columns */}
+                  <div className="lg:col-span-2 space-y-4">
+                     <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                           <Calendar className="w-5 h-5 text-blue-400"/>
+                           المواعيد
+                        </h3>
+                        <span className="text-xs text-zinc-500 bg-white/5 px-3 py-1 rounded-full">{schedule.length} موعد</span>
+                     </div>
                      
                      {schedule.length === 0 ? (
-                        <Card className="p-8 text-center">
-                           <Calendar className="w-12 h-12 mx-auto mb-4 text-zinc-600"/>
-                           <p className="text-zinc-500">لا توجد مواعيد</p>
+                        <Card className="p-12 text-center border-dashed border-2 border-white/10 bg-transparent">
+                           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                              <Calendar className="w-8 h-8 text-blue-500/50"/>
+                           </div>
+                           <p className="text-zinc-400 font-medium">لا توجد مواعيد</p>
+                           <p className="text-zinc-600 text-sm mt-1">أضف موعدك الأول</p>
                         </Card>
                      ) : (
                         <div className="space-y-3">
                            {schedule
                               .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                              .map(event => (
-                              <Card 
-                                 key={event.id} 
-                                 className={`p-4 transition-all ${event.completed ? 'opacity-60' : ''}`}
-                              >
-                                 <div className="flex gap-3">
-                                    <button 
-                                       onClick={() => toggleEventComplete(event)}
-                                       className={`mt-1 w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                                          event.completed 
-                                             ? 'bg-emerald-500 border-emerald-500' 
-                                             : 'border-zinc-600 hover:border-emerald-500'
-                                       }`}
-                                    >
-                                       {event.completed && <CheckCircle className="w-4 h-4 text-white"/>}
-                                    </button>
+                              .map(event => {
+                                 const eventColor = eventTypeLabels[event.type]?.color || 'bg-zinc-500';
+                                 const colorMap: Record<string, string> = {
+                                    'bg-blue-500': '#3b82f6',
+                                    'bg-purple-500': '#a855f7',
+                                    'bg-emerald-500': '#10b981',
+                                    'bg-amber-500': '#f59e0b',
+                                    'bg-zinc-500': '#71717a'
+                                 };
+                                 const hexColor = colorMap[eventColor] || '#71717a';
+                                 
+                                 return (
+                                 <div 
+                                    key={event.id} 
+                                    className={`relative bg-gradient-to-br from-[#1a1a1a] to-[#0f0f0f] rounded-2xl overflow-hidden transition-all duration-500 group border border-white/5 hover:border-white/10 ${event.completed ? 'opacity-50' : 'hover:shadow-2xl hover:shadow-black/40'}`}
+                                 >
+                                    {/* Side accent */}
+                                    <div className="absolute right-0 top-0 bottom-0 w-1" style={{ backgroundColor: hexColor }}></div>
                                     
-                                    <div className="flex-1 min-w-0">
-                                       <div className="flex items-start justify-between gap-2">
-                                          <div>
-                                             <h4 className={`font-bold ${event.completed ? 'line-through text-zinc-500' : 'text-white'}`}>
-                                                {event.title}
-                                             </h4>
-                                             {event.description && (
-                                                <p className="text-zinc-400 text-sm mt-1">{event.description}</p>
-                                             )}
-                                          </div>
-                                          <div className="flex gap-1 flex-shrink-0">
-                                             <button 
-                                                onClick={() => openEditEvent(event)}
-                                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
-                                             >
-                                                <Edit3 className="w-4 h-4 text-blue-400"/>
-                                             </button>
-                                             <button 
-                                                onClick={() => event.id && handleDeleteEvent(event.id)}
-                                                className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors"
-                                             >
-                                                <Trash2 className="w-4 h-4 text-red-400"/>
-                                             </button>
-                                          </div>
+                                    <div className="flex">
+                                       {/* Date Column */}
+                                       <div className={`w-20 flex-shrink-0 flex flex-col items-center justify-center py-4 relative ${event.completed ? 'bg-zinc-900' : ''}`} style={{ background: event.completed ? undefined : `linear-gradient(180deg, ${hexColor}15, transparent)` }}>
+                                          <span className="text-3xl font-bold text-white">{new Date(event.date).getDate()}</span>
+                                          <span className="text-[10px] text-zinc-400 uppercase font-medium">{new Date(event.date).toLocaleDateString('ar-DZ', { month: 'short' })}</span>
+                                          <span className="text-[9px] text-zinc-600 mt-1">{new Date(event.date).getFullYear()}</span>
                                        </div>
                                        
-                                       <div className="flex flex-wrap items-center gap-2 mt-3">
-                                          <span className={`text-[10px] px-2 py-1 rounded-full text-white ${eventTypeLabels[event.type]?.color || 'bg-zinc-500'}`}>
-                                             {eventTypeLabels[event.type]?.label || event.type}
-                                          </span>
-                                          <span className="text-xs text-zinc-400 flex items-center gap-1">
-                                             <CalendarCheck className="w-3 h-3"/>
-                                             {new Date(event.date).toLocaleDateString('ar-DZ')}
-                                          </span>
-                                          {event.time && (
-                                             <span className="text-xs text-zinc-400 flex items-center gap-1">
-                                                <Clock className="w-3 h-3"/>
-                                                {event.time}
+                                       {/* Content */}
+                                       <div className="flex-1 p-4 min-w-0">
+                                          <div className="flex items-start justify-between gap-3">
+                                             <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-3">
+                                                   <button 
+                                                      onClick={() => toggleEventComplete(event)}
+                                                      className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                                                         event.completed 
+                                                            ? 'bg-emerald-500 border-emerald-500 shadow-lg shadow-emerald-500/30' 
+                                                            : 'border-zinc-600 hover:border-emerald-500 hover:bg-emerald-500/10'
+                                                      }`}
+                                                   >
+                                                      {event.completed && <CheckCircle className="w-4 h-4 text-white"/>}
+                                                   </button>
+                                                   <h4 className={`font-bold text-base ${event.completed ? 'line-through text-zinc-500' : 'text-white'}`}>
+                                                      {event.title}
+                                                   </h4>
+                                                </div>
+                                                {event.description && (
+                                                   <p className="text-zinc-500 text-sm mt-2 mr-9 line-clamp-2">{event.description}</p>
+                                                )}
+                                             </div>
+                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                                <button 
+                                                   onClick={() => openEditEvent(event)}
+                                                   className="p-2 bg-blue-500/10 hover:bg-blue-500/20 rounded-xl transition-all hover:scale-110"
+                                                >
+                                                   <Edit3 className="w-4 h-4 text-blue-400"/>
+                                                </button>
+                                                <button 
+                                                   onClick={() => event.id && handleDeleteEvent(event.id)}
+                                                   className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-xl transition-all hover:scale-110"
+                                                >
+                                                   <Trash2 className="w-4 h-4 text-red-400"/>
+                                                </button>
+                                             </div>
+                                          </div>
+                                          
+                                          {/* Tags */}
+                                          <div className="flex flex-wrap items-center gap-2 mt-4 mr-9">
+                                             <span className={`text-[10px] px-2.5 py-1 rounded-lg text-white font-medium ${eventColor}`}>
+                                                {eventTypeLabels[event.type]?.label || event.type}
                                              </span>
-                                          )}
-                                          {event.clientName && (
-                                             <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full text-zinc-300">
-                                                {event.clientName}
-                                             </span>
-                                          )}
+                                             {event.time && (
+                                                <span className="text-[11px] text-zinc-400 flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-lg">
+                                                   <Clock className="w-3 h-3"/>
+                                                   {event.time}
+                                                </span>
+                                             )}
+                                             {event.clientName && (
+                                                <span className="text-[11px] bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg flex items-center gap-1.5">
+                                                   <Users className="w-3 h-3"/>
+                                                   {event.clientName}
+                                                </span>
+                                             )}
+                                          </div>
                                        </div>
                                     </div>
                                  </div>
-                              </Card>
-                           ))}
+                              )})}
+                        </div>
+                     )}
+
+                     {/* Upcoming Alert */}
+                     {schedule.filter(e => !e.completed && new Date(e.date) >= new Date()).length > 0 && (
+                        <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 border border-blue-500/20">
+                           <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-500/20 rounded-xl animate-pulse">
+                                 <Bell className="w-5 h-5 text-blue-400"/>
+                              </div>
+                              <div>
+                                 <p className="text-white font-medium text-sm">
+                                    {schedule.filter(e => !e.completed && new Date(e.date) >= new Date()).length} موعد قادم
+                                 </p>
+                                 <p className="text-zinc-500 text-xs">
+                                    التالي: {schedule.filter(e => !e.completed).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.title}
+                                 </p>
+                              </div>
+                           </div>
                         </div>
                      )}
                   </div>
                </div>
-
-               {/* Upcoming Events Summary */}
-               {schedule.filter(e => !e.completed && new Date(e.date) >= new Date()).length > 0 && (
-                  <Card className="p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20">
-                     <div className="flex items-center gap-3">
-                        <Bell className="w-5 h-5 text-blue-400"/>
-                        <div>
-                           <p className="text-white font-medium">
-                              لديك {schedule.filter(e => !e.completed && new Date(e.date) >= new Date()).length} موعد قادم
-                           </p>
-                           <p className="text-zinc-400 text-sm">
-                              القادم: {schedule.filter(e => !e.completed).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]?.title}
-                           </p>
-                        </div>
-                     </div>
-                  </Card>
-               )}
              </div>
           )}
 
